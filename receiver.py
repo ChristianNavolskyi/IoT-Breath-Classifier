@@ -6,16 +6,21 @@ import numpy
 import serial
 import wx
 
-import logger
+from classifier import Classifier
+from file_logger import FileLogger
+from visualiser import Visualiser
 
 matplotlib.use('WXAgg')
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from matplotlib.figure import Figure
 
 
-class DataLoggerWindow(wx.Frame):
+class Receiver(wx.Frame):
     def __init__(self):
-        self.value_logger = logger.setup_file_logger("Breath_logger", "breath.log")
+        self.value_logger = FileLogger("Breath_logger", "breath.log")
+        self.visualiser = Visualiser()
+        self.classifier = Classifier()
+
         wx.Frame.__init__(self, None, -1, "ComPlotter", (100, 100), (640, 580))
 
         self.SetBackgroundColour('#ece9d8')
@@ -117,7 +122,7 @@ if __name__ == '__main__':
         logging.error("No port name provided. Please set PORT_NAME in the environment variables.")
         exit(1)
     app = wx.App()
-    window = DataLoggerWindow()
+    window = Receiver()
 
     window.Show()
     app.MainLoop()
