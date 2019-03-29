@@ -5,115 +5,98 @@ import matplotlib
 import numpy
 import serial
 import wx
+from wx import App
 
 from classifier import Classifier
 from file_logger import FileLogger
 from visualiser import Visualiser
 
 matplotlib.use('WXAgg')
-from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-from matplotlib.figure import Figure
 
 
-class Receiver(wx.Frame):
+class Receiver(App):
     def __init__(self):
+        App.__init__(self)
+
+        self.x_limit = 100
+        self.x_value_range = range(self.x_limit)
+        self.number_of_plots = 1
+        self.values = []
+        for m in range(self.number_of_plots):
+            self.values.append(0 * numpy.ones(self.x_limit, numpy.int))
+
+        self.value_extremes = [0 for _ in self.x_value_range]
+        self.value_max = float("-inf")
+        self.value_min = float("inf")
+
         self.value_logger = FileLogger("Breath_logger", "breath.log")
-        self.visualiser = Visualiser()
+        self.visualiser = Visualiser(self.on_start_stop_button, self.number_of_plots, self.values, self.x_limit, self.x_value_range)
         self.classifier = Classifier()
+        self.ser = serial.Serial()
+        self.timer = wx.Timer(self)
 
-        wx.Frame.__init__(self, None, -1, "ComPlotter", (100, 100), (640, 580))
-
-        self.SetBackgroundColour('#ece9d8')
-
-        # Flag variables
+        self.Bind(wx.EVT_TIMER, self.get_sample, self.timer)
         self.isLogging = False
 
-        # Create data buffers
-        self.N = 100
-        self.n = range(self.N)
-        self.M = 5
-        self.x = []
-        for m in range(self.M):
-            self.x.append(0 * numpy.ones(self.N, numpy.int))
+    def MainLoop(self):
+        App.MainLoop(self)
+        self.visualiser.show()
 
-        # Create plot area and axes
-        self.fig = Figure(facecolor='#ece9d8')
-        self.canvas = FigureCanvasWxAgg(self, -1, self.fig)
-        self.canvas.SetPosition((0, 0))
-        self.canvas.SetSize((640, 320))
-        self.ax = self.fig.add_axes([0.08, 0.1, 0.86, 0.8])
-        self.ax.autoscale(False)
-        self.ax.set_xlim(0, 99)
-        self.ax.set_ylim(0, 100)
-        for m in range(self.M):
-            self.ax.plot(self.n, self.x[m])
-
-        # Create text box for event logging
-        self.log_text = wx.TextCtrl(
-            self, -1, pos=(140, 320), size=(465, 200),
-            style=wx.TE_MULTILINE)
-        self.log_text.SetFont(
-            wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
-
-        # Create timer to read incoming data and scroll plot
-        self.timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.GetSample, self.timer)
-
-        # Create start/stop button
-        self.start_stop_button = wx.Button(
-            self, label="Start", pos=(25, 320), size=(100, 100))
-        self.start_stop_button.SetFont(
-            wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
-        self.start_stop_button.Bind(
-            wx.EVT_BUTTON, self.onStartStopButton)
-
-    def GetSample(self, event=None):
+    def get_sample(self, event=None):
         # Get a line of text from the serial port
         sample_string = self.ser.readline()
 
         # Add the line to the log text box
-        self.log_text.AppendText(sample_string)
+        self.visualiser.append_log(sample_string)
 
         # If the line is the right length, parse it
         if len(sample_string) == 26:
             sample_string = sample_string[0:-1]
             sample_values = sample_string.split()
 
-            for m in range(self.M):
+            for m in range(self.number_of_plots):
                 # get one value from sample
                 value = int(sample_values[m])
-                self.x[m][0:99] = self.x[m][1:]
-                self.x[m][99] = value
+                self.update_value_min_max(value)
+                self.values[m][0:99] = self.values[m][1:]
+                self.values[m][99] = value
 
+            for m in range(self.number_of_plots):
+                self.value_logger.info("{0}".format(self.values[m]))
+
+            self.visualiser.update_plot(self.values, self.number_of_plots, self.x_limit, self.x_value_range, y_lower_limit=self.value_min - 10, y_upper_limit=self.value_max + 10)
             # Update plot
-            self.ax.cla()
-            self.ax.autoscale(False)
-            self.ax.set_xlim(0, self.N - 1)
-            self.ax.set_ylim(-100, 1100)
-            for m in range(self.M):
-                self.ax.plot(self.n, self.x[m])
-                self.value_logger.info("{0}".format(self.x[m]))
-            self.canvas.draw()
+            # self.ax.cla()
+            # self.ax.autoscale(False)
+            # self.ax.set_xlim(0, self.N - 1)
+            # self.ax.set_ylim(-100, 1100)
+        # self.canvas.draw()
 
-    def onStartStopButton(self, event):
+    def update_value_min_max(self, value):
+        self.value_extremes[0:self.x_limit - 1] = self.value_extremes[1:]
+        self.value_extremes[self.x_limit - 1] = value
+
+        self.value_max = max(self.value_extremes)
+        self.value_min = min(self.value_extremes)
+
+    def on_start_stop_button(self, event):
         if not self.isLogging:
             self.isLogging = True
-            self.ser = serial.Serial()
             self.ser.baudrate = 115200
             self.ser.timeout = 0.25
             self.ser.port = port_name
             self.ser.open()
             if self.ser.isOpen():
-                self.log_text.AppendText("Opened port " + port_name + "\n")
+                self.visualiser.append_log("Opened port " + port_name + "\n")
                 # We successfully opened a port, so start
                 # a timer to read incoming data
                 self.timer.Start(100)
-                self.start_stop_button.SetLabel("Stop")
+                self.visualiser.set_button_label("Stop")
         else:
             self.timer.Stop()
             self.ser.close()
             self.isLogging = False
-            self.start_stop_button.SetLabel("Start")
+            self.visualiser.set_button_label("Start")
 
 
 if __name__ == '__main__':

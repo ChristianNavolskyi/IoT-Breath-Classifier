@@ -1,4 +1,4 @@
-serial
+pyserial
 wxPython
 numpy
 matplotlib
