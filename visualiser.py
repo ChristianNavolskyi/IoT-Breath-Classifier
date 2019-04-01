@@ -19,7 +19,7 @@ class Visualiser(Frame):
         self.ax.set_ylim(0, y_limit)
 
         for m in range(number_of_plots):
-            self.ax.plot(x_value_range, values[m])
+            self.ax.plot(x_value_range, values[m].values)
 
         self.log_text = wx.TextCtrl(self, -1, pos=(140, 320), size=(465, 200), style=wx.TE_MULTILINE)
         self.log_text.SetFont(wx.Font(12, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
@@ -38,7 +38,7 @@ class Visualiser(Frame):
         self.ax.set_ylim(y_lower_limit, y_upper_limit)
 
         for plot_type in range(number_of_plots):
-            self.ax.plot(x_value_range, values[plot_type])
+            self.ax.plot(x_value_range, values[plot_type].values)
 
         self.canvas.draw()
 

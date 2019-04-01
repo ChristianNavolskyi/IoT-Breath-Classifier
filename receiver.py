@@ -2,11 +2,11 @@ import logging
 import os
 
 import matplotlib
-import numpy
 import serial
 import wx
 from wx import App
 
+from bounded_list import BoundedList
 from classifier import Classifier
 from file_logger import FileLogger
 from visualiser import Visualiser
@@ -21,17 +21,10 @@ class Receiver(App):
         self.sample_length = 26
         self.x_limit = 100
         self.x_value_range = range(self.x_limit)
-        self.number_of_plots = 1
-        self.values = []
-        for m in range(self.number_of_plots):
-            self.values.append(0 * numpy.ones(self.x_limit, numpy.int))
-
-        self.value_extremes = [0 for _ in self.x_value_range]
-        self.value_max = float("-inf")
-        self.value_min = float("inf")
+        self.values = BoundedList(self.x_limit)
 
         self.value_logger = FileLogger("Breath_logger", "breath.log")
-        self.visualiser = Visualiser(self.on_start_stop_button, self.number_of_plots, self.values, self.x_limit, self.x_value_range)
+        self.visualiser = Visualiser(self.on_start_stop_button, 1, [self.values], self.x_limit, self.x_value_range)
         self.classifier = Classifier()
         self.ser = serial.Serial()
         self.timer = wx.Timer(self)
@@ -45,37 +38,23 @@ class Receiver(App):
 
     def get_sample(self, event=None):
         sample_string = self.ser.readline()
-
         self.visualiser.append_log(sample_string)
         logging.debug("Receiving data: {0}".format(sample_string))
 
         if len(sample_string) == self.sample_length:
             sample_string = sample_string[0:-1]
             sample_values = sample_string.split()
+            value = int(sample_values[0])
 
-            for m in range(self.number_of_plots):
-                # get one value from sample
-                value = int(sample_values[m])
-                self.update_value_min_max(value)
-                self.values[m][0:self.x_limit - 1] = self.values[m][1:]
-                self.values[m][self.x_limit - 1] = value
-
-            for m in range(self.number_of_plots):
-                self.value_logger.info("{0}".format(self.values[m][self.x_limit - 1]))
-
-            self.visualiser.update_plot(self.values,
-                                        self.number_of_plots,
+            self.values.add_value(value)
+            self.value_logger.info("{0}".format(value))
+    
+            self.visualiser.update_plot([self.values],
+                                        1,
                                         self.x_limit,
                                         self.x_value_range,
-                                        y_lower_limit=self.value_min - 10,
-                                        y_upper_limit=self.value_max + 10)
-
-    def update_value_min_max(self, value):
-        self.value_extremes[0:self.x_limit - 1] = self.value_extremes[1:]
-        self.value_extremes[self.x_limit - 1] = value
-
-        self.value_max = max(self.value_extremes)
-        self.value_min = min(self.value_extremes)
+                                        y_lower_limit=self.values.max() - 10,
+                                        y_upper_limit=self.values.min() + 10)
 
     def on_start_stop_button(self, event):
         if not self.isLogging:
