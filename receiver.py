@@ -48,7 +48,7 @@ class Receiver(App):
 
             self.values.add_value(value)
             self.value_logger.info("{0}".format(value))
-    
+
             self.visualiser.update_plot([self.values],
                                         1,
                                         self.x_limit,
@@ -72,7 +72,6 @@ class Receiver(App):
                     self.visualiser.set_button_label("Stop")
             except serial.serialutil.SerialException:
                 logging.error("Could not open serial port " + str(self.ser))
-                pass
         else:
             self.timer.Stop()
             self.ser.close()
