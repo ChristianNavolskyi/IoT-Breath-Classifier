@@ -28,9 +28,6 @@ class Visualiser(Frame):
         self.start_stop_button.SetFont(wx.Font(14, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False))
         self.start_stop_button.Bind(wx.EVT_BUTTON, start_button_callback)
 
-    def show(self):
-        Frame.show(self)
-
     def set_button_label(self, label):
         self.start_stop_button.SetLabel(label)
 

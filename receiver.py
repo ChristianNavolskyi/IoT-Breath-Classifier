@@ -18,6 +18,7 @@ class Receiver(App):
     def __init__(self):
         App.__init__(self)
 
+        self.sample_length = 26
         self.x_limit = 100
         self.x_value_range = range(self.x_limit)
         self.number_of_plots = 1
@@ -39,18 +40,16 @@ class Receiver(App):
         self.isLogging = False
 
     def MainLoop(self):
+        self.visualiser.Show()
         App.MainLoop(self)
-        self.visualiser.show()
 
     def get_sample(self, event=None):
-        # Get a line of text from the serial port
         sample_string = self.ser.readline()
 
-        # Add the line to the log text box
         self.visualiser.append_log(sample_string)
+        logging.debug("Receiving data: {0}".format(sample_string))
 
-        # If the line is the right length, parse it
-        if len(sample_string) == 26:
+        if len(sample_string) == self.sample_length:
             sample_string = sample_string[0:-1]
             sample_values = sample_string.split()
 
@@ -58,19 +57,18 @@ class Receiver(App):
                 # get one value from sample
                 value = int(sample_values[m])
                 self.update_value_min_max(value)
-                self.values[m][0:99] = self.values[m][1:]
-                self.values[m][99] = value
+                self.values[m][0:self.x_limit - 1] = self.values[m][1:]
+                self.values[m][self.x_limit - 1] = value
 
             for m in range(self.number_of_plots):
-                self.value_logger.info("{0}".format(self.values[m]))
+                self.value_logger.info("{0}".format(self.values[m][self.x_limit - 1]))
 
-            self.visualiser.update_plot(self.values, self.number_of_plots, self.x_limit, self.x_value_range, y_lower_limit=self.value_min - 10, y_upper_limit=self.value_max + 10)
-            # Update plot
-            # self.ax.cla()
-            # self.ax.autoscale(False)
-            # self.ax.set_xlim(0, self.N - 1)
-            # self.ax.set_ylim(-100, 1100)
-        # self.canvas.draw()
+            self.visualiser.update_plot(self.values,
+                                        self.number_of_plots,
+                                        self.x_limit,
+                                        self.x_value_range,
+                                        y_lower_limit=self.value_min - 10,
+                                        y_upper_limit=self.value_max + 10)
 
     def update_value_min_max(self, value):
         self.value_extremes[0:self.x_limit - 1] = self.value_extremes[1:]
@@ -85,13 +83,17 @@ class Receiver(App):
             self.ser.baudrate = 115200
             self.ser.timeout = 0.25
             self.ser.port = port_name
-            self.ser.open()
-            if self.ser.isOpen():
-                self.visualiser.append_log("Opened port " + port_name + "\n")
-                # We successfully opened a port, so start
-                # a timer to read incoming data
-                self.timer.Start(100)
-                self.visualiser.set_button_label("Stop")
+            try:
+                self.ser.open()
+                if self.ser.isOpen():
+                    message = "Opened port " + port_name
+                    self.visualiser.append_log(message + "\n")
+                    logging.info(message)
+                    self.timer.Start(100)
+                    self.visualiser.set_button_label("Stop")
+            except serial.serialutil.SerialException:
+                logging.error("Could not open serial port " + str(self.ser))
+                pass
         else:
             self.timer.Stop()
             self.ser.close()
@@ -104,8 +106,6 @@ if __name__ == '__main__':
     if not port_name:
         logging.error("No port name provided. Please set PORT_NAME in the environment variables.")
         exit(1)
-    app = wx.App()
-    window = Receiver()
 
-    window.Show()
-    app.MainLoop()
+    receiver = Receiver()
+    receiver.MainLoop()
