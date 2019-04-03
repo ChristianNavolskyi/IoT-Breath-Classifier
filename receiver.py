@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+import time
 from tkinter import *
 
 import matplotlib
@@ -16,28 +17,38 @@ matplotlib.use('WXAgg')
 
 
 def sin(frequency, sin_amplitude, x):
-    return sin_amplitude * numpy.sin(x * 2 * numpy.pi / frequency) + sin_amplitude
+    return sin_amplitude * numpy.sin(x * 2 * numpy.pi * frequency) + sin_amplitude
 
 
-breath_frequency = float(os.getenv("breath_freq", 12 / 60))
-scan_frequency = int(os.getenv("scan_freq", 500))
-amplitude = float(os.getenv("amplitude", 5.0))
+breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
+scan_frequency_arg = int(os.getenv("scan_freq", 50))
+amplitude_arg = float(os.getenv("amplitude", 5.0))
 
 
 class Receiver(Tk):
     def __init__(self):
-        Tk.__init__(self, className="Breath Visualiser")
+        Tk.__init__(self)
+        self.wm_iconname("Breath Visualiser")
         logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
         self.counter = 0
 
-        x_limit = 10
+        x_limit = 500
         self.sample_length = 26
-        self.x_value_range = range(x_limit)
-        self.values = BoundedList(x_limit)
+        self.x_values = BoundedList(x_limit, values=numpy.array([time.time() for _ in range(x_limit)]))
+        self.breath_values = BoundedList(x_limit)
 
-        self.visualiser = Visualiser(self, 1, [self.values], self.x_value_range)
-        self.visualiser.pack(side=LEFT, fill=BOTH, expand=True, padx=10, pady=10)
+        Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
+        self.visualiser = Visualiser(self, self.x_values, self.breath_values)
+        self.visualiser.grid(row=1, column=0, sticky=W)
+
+        Label(self, text="Sensor Values").grid(row=0, column=1, pady=10)
+        self.log_text = Text(self)
+        self.log_text.grid(row=1, column=1, sticky=N + S + E, padx=10)
+
+        scrollbar = Scrollbar(self, command=self.log_text.yview)
+        scrollbar.grid(row=1, column=2, sticky=N + S)
+        self.log_text["yscrollcommand"] = scrollbar.set
 
         self.button_text = StringVar(self, "Start")
         start_stop_button = Button(self,
@@ -45,13 +56,10 @@ class Receiver(Tk):
                                    command=self.on_start_stop_button,
                                    bg="grey",
                                    fg="black")
-        start_stop_button.pack(side=BOTTOM, fill=X, expand=True, padx=10, pady=10)
+        start_stop_button.grid(row=3, pady=10)
 
-        self.log_text = Text(self)
-        self.log_text.pack(side=RIGHT, fill=BOTH, expand=True, padx=10, pady=10)
-
-        self.value_logger = FileLogger("Breath_logger", "breath.log")
-        self.classifier = Classifier()
+        self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
+        self.classifier = Classifier("logs/anomalies.log")
         self.ser = serial.Serial()
 
         self.timer_active = True
@@ -63,33 +71,36 @@ class Receiver(Tk):
         if self.ser.is_open:
             self.ser.close()
 
-    def get_sample(self, value=None, event=None):
+    def get_sample(self, value=None, event=None, scan_frequency=50):
         if self.ser.is_open:
             sample_string = self.ser.readline()
-            self.log_text.insert(END, str(sample_string) + "\n")
             logging.debug("Receiving data: {0}".format(sample_string))
 
             if len(sample_string) == self.sample_length:
                 sample_string = sample_string[0:-1]
                 sample_values = sample_string.split()
-                value = int(sample_values[0])
+                value = float(sample_values[0])
         elif not value:
             return
 
-        self.values.add_value(value)
-        self.value_logger.info("{0}".format(value))
+        self.x_values.add_value(time.time())
+        self.breath_values.add_value(value)
 
-        self.visualiser.update_plot([self.values], 1, self.x_value_range)
+        self.value_logger.info("{0}".format(value))
+        self.log_text.insert(END, "Value: " + str(value) + "\n")
+        self.log_text.see(END)
+
+        self.visualiser.update_plot()
 
         if self.timer_active:
-            self.after(10, self.get_sample)
+            self.after(int(1000 / scan_frequency), lambda: self.get_sample(scan_frequency=scan_frequency))
 
     def simulate_sample(self):
         print(self.counter)
         self.timer_active = False
-        x = self.counter * 1 / scan_frequency
-        self.get_sample(value=sin(breath_frequency, amplitude, x))
-        self.after(500, func=self.simulate_sample)
+        x = self.counter * 1 / scan_frequency_arg
+        self.get_sample(value=sin(breath_frequency_arg, amplitude_arg, x))
+        self.after(int(1000 / scan_frequency_arg), func=self.simulate_sample)
         self.counter += 1
 
     def on_start_stop_button(self, event):
@@ -106,7 +117,7 @@ class Receiver(Tk):
                     logging.info(message)
                     self.button_text.set("Stop")
                     self.timer_active = True
-                    self.get_sample()
+                    self.get_sample(scan_frequency=scan_frequency_arg)
             except serial.serialutil.SerialException:
                 logging.error("Could not open serial port " + str(self.ser))
         else:

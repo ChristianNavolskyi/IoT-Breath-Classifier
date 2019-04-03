@@ -3,7 +3,7 @@ from notifier import Notifier
 
 
 class Classifier:
-    def __init__(self, detection_file_name="anomalies.log"):
+    def __init__(self, detection_file_name):
         self.notifier = Notifier()
         self.detectionLogger = FileLogger("ANOMALY_DETECTED", detection_file_name)
         self.value_size = 100

@@ -1,5 +1,4 @@
 pyserial
-wxPython
 numpy
 matplotlib
 requests

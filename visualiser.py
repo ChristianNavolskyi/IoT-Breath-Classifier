@@ -5,22 +5,26 @@ from matplotlib.pyplot import Figure
 
 
 class Visualiser(tk.Frame):
-    def __init__(self, master, number_of_plots, values, x_value_range):
+    def __init__(self, master, x_values, *y_values):
         tk.Frame.__init__(self, master=master)
+
+        self.x_values = x_values
+        self.y_values_of_plots = y_values
+        self.number_of_plots = y_values.__len__()
 
         fig = Figure()
         self.canvas = FigureCanvasTkAgg(fig, self)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().grid()
 
         self.ax = fig.add_subplot(1, 1, 1)
 
-        for m in range(number_of_plots):
-            self.ax.plot(x_value_range, values[m].values)
+        for plot_type in range(self.number_of_plots):
+            self.ax.plot(x_values.values, self.y_values_of_plots[plot_type].values)
 
-    def update_plot(self, values, number_of_plots=1, x_value_range=range(100)):
+    def update_plot(self):
         self.ax.clear()
-
-        for plot_type in range(number_of_plots):
-            self.ax.plot(x_value_range, values[plot_type].values)
+        for plot_type in range(self.number_of_plots):
+            self.ax.plot(self.x_values.values, self.y_values_of_plots[plot_type].values)
 
         self.canvas.draw()
