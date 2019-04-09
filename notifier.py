@@ -1,6 +1,6 @@
-import json
 import logging
 
+import geocoder
 import requests
 
 
@@ -43,7 +43,5 @@ class Notifier:
 
 
 def get_lon_lat():
-    send_url = 'http://freegeoip.net/json'
-    r = requests.get(send_url)
-    j = json.loads(r.text)
-    return (j['latitude']), (j['longitude'])
+    loc = geocoder.ip("me")
+    return loc.latlng
