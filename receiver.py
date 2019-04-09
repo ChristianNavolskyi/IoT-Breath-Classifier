@@ -2,7 +2,7 @@ import atexit
 import logging
 import os
 import time
-from tkinter import *
+from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
 import matplotlib
 import numpy
