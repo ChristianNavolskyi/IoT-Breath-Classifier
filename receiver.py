@@ -21,7 +21,7 @@ def sin(frequency, sin_amplitude, x):
 
 
 breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
-scan_frequency_arg = int(os.getenv("scan_freq", 50))
+scan_frequency_arg = int(os.getenv("scan_freq", 1))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
 
 
@@ -33,14 +33,20 @@ class Receiver(Tk):
 
         self.counter = 0
 
-        x_limit = 500
+        self.x_limit = 500
         self.sample_length = 26
-        self.x_values = BoundedList(x_limit, values=numpy.array([time.time() for _ in range(x_limit)]))
-        self.breath_values = BoundedList(x_limit)
+        self.x_values = BoundedList(self.x_limit, values=numpy.array([time.time() for _ in range(self.x_limit)]))
+        self.breath_values = BoundedList(self.x_limit)
+
+        self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
+        self.classifying = False
+        self.classification_job = None
+        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values)
+        self.ser = serial.Serial()
 
         Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
         self.visualiser = Visualiser(self, self.x_values, self.breath_values)
-        self.visualiser.grid(row=1, column=0, sticky=W)
+        self.visualiser.grid(row=1, column=0, sticky=N + S + W)
 
         Label(self, text="Sensor Values").grid(row=0, column=1, pady=10)
         self.log_text = Text(self)
@@ -53,14 +59,10 @@ class Receiver(Tk):
         self.button_text = StringVar(self, "Start")
         start_stop_button = Button(self,
                                    textvariable=self.button_text,
-                                   command=self.on_start_stop_button,
+                                   command=self.set_classification_state,
                                    bg="grey",
                                    fg="black")
-        start_stop_button.grid(row=3, pady=10)
-
-        self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
-        self.classifier = Classifier("logs/anomalies.log")
-        self.ser = serial.Serial()
+        start_stop_button.grid(row=3, columnspan=3, pady=10, sticky=S)
 
         self.timer_active = True
         self.isLogging = False
@@ -70,6 +72,17 @@ class Receiver(Tk):
     def do_at_exit(self):
         if self.ser.is_open:
             self.ser.close()
+
+    def set_classification_state(self, state=None):
+        if state is None:
+            self.classifying = not self.classifying
+
+        if self.classifying:
+            self.classifier.classify_values()
+            self.classification_job = self.after(1000, lambda: self.set_classification_state(True))
+        elif self.classification_job is not None:
+            self.after_cancel(self.classification_job)
+            self.classification_job = None
 
     def get_sample(self, value=None, event=None, scan_frequency=50):
         if self.ser.is_open:
@@ -87,20 +100,22 @@ class Receiver(Tk):
         self.breath_values.add_value(value)
 
         self.value_logger.info("{0}".format(value))
-        self.log_text.insert(END, "Value: " + str(value) + "\n")
-        self.log_text.see(END)
+        # self.write_log_text("Value: " + str(value))
 
         self.visualiser.update_plot()
+
+        if self.counter % self.x_limit == 0 and self.counter > 0:
+            self.write_log_text("Starting classification")
+            self.classifier.classify_values()
 
         if self.timer_active:
             self.after(int(1000 / scan_frequency), lambda: self.get_sample(scan_frequency=scan_frequency))
 
     def simulate_sample(self):
-        print(self.counter)
         self.timer_active = False
         x = self.counter * 1 / scan_frequency_arg
         self.get_sample(value=sin(breath_frequency_arg, amplitude_arg, x))
-        self.after(int(1000 / scan_frequency_arg), func=self.simulate_sample)
+        self.after(int(100 / scan_frequency_arg), func=self.simulate_sample)
         self.counter += 1
 
     def on_start_stop_button(self, event):
@@ -113,8 +128,7 @@ class Receiver(Tk):
                 self.ser.open()
                 if self.ser.isOpen():
                     message = "Opened port " + port_name
-                    self.log_text.insert(END, message + "\n")
-                    logging.info(message)
+                    self.write_log_text(message)
                     self.button_text.set("Stop")
                     self.timer_active = True
                     self.get_sample(scan_frequency=scan_frequency_arg)
@@ -125,6 +139,11 @@ class Receiver(Tk):
             self.ser.close()
             self.isLogging = False
             self.button_text.set("Start")
+
+    def write_log_text(self, message):
+        self.log_text.insert(END, message + "\n")
+        self.log_text.see(END)
+        logging.info(message)
 
 
 if __name__ == '__main__':

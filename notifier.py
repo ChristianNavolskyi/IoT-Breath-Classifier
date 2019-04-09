@@ -28,12 +28,15 @@ class Notifier:
             data[lon] = lon
             data[lat] = lat
 
+        logging.debug("Sending post")
         requests.post(self.notification_url, data=data)
 
     def check_endpoint_availability(self):
         try:
+            logging.debug("try pinging endpoint")
             requests.get(self.base_url)
             self.working = True
+            logging.debug("endpoint available")
         except requests.exceptions.ConnectionError:
             self.working = False
             logging.warning("Telegram endpoint is not running!")
