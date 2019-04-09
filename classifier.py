@@ -14,12 +14,13 @@ class Classifier:
         self.time_values = time_values
         self.breath_values = breath_values
 
+        self.initial_breath_rate = None
+
     def classify_values(self):
-        time = self.time_values.copy()
-        breath = self.breath_values.copy()
+        time = self.time_values.copy_values()
+        breath = self.breath_values.copy_values()
 
         breath_mean = np.mean(breath)
-
         time_crossing_values = np.argwhere(np.diff(np.sign(breath - breath_mean))).flatten()
 
         crossing_times = time[time_crossing_values]
@@ -31,7 +32,7 @@ class Classifier:
         mean_diff = np.mean(diffs)
         logging.info("Mean diff: {0}".format(mean_diff))
 
-        classification_result = False
-
-        if classification_result:
+        if self.initial_breath_rate is None:
+            self.initial_breath_rate = mean_diff
+        elif mean_diff / self.initial_breath_rate < 0.75:
             self.notifier.send_emergency("An asthma attack could be happening right now, please help", send_location=True)

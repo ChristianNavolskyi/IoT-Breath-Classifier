@@ -19,7 +19,7 @@ class BoundedList:
     def min(self):
         return min(self.values)
 
-    def copy(self):
+    def copy_values(self):
         return self.values.copy()
 
     def __str__(self):

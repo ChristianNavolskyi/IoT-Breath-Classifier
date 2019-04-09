@@ -21,7 +21,7 @@ def sin(frequency, sin_amplitude, x):
 
 
 breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
-scan_frequency_arg = int(os.getenv("scan_freq", 1))
+scan_frequency_arg = int(os.getenv("scan_freq", 50))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
 
 
