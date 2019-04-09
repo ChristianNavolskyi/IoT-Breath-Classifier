@@ -21,7 +21,7 @@ def sin(frequency, sin_amplitude, x):
 
 
 breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
-scan_frequency_arg = int(os.getenv("scan_freq", 50))
+scan_frequency_arg = int(os.getenv("scan_frequency", 50))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
 
 
@@ -41,7 +41,7 @@ class Receiver(Tk):
         self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
         self.classifying = False
         self.classification_job = None
-        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values)
+        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, os.getenv("breath_threshold", 0.25))
         self.ser = serial.Serial()
 
         Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
