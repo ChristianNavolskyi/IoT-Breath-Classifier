@@ -19,7 +19,6 @@ matplotlib.use('WXAgg')
 def sin(frequency, sin_amplitude, x):
     return sin_amplitude * numpy.sin(x * 2 * numpy.pi * frequency) + sin_amplitude
 
-
 breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
 scan_frequency_arg = int(os.getenv("scan_frequency", 50))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
@@ -33,7 +32,7 @@ class Receiver(Tk):
 
         self.counter = 0
 
-        self.x_limit = 500
+        self.x_limit = os.getenv("num_values", 100)
         self.sample_length = 26
         self.x_values = BoundedList(self.x_limit, values=numpy.array([time.time() for _ in range(self.x_limit)]))
         self.breath_values = BoundedList(self.x_limit)
@@ -41,7 +40,7 @@ class Receiver(Tk):
         self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
         self.classifying = False
         self.classification_job = None
-        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, os.getenv("breath_threshold", 0.25))
+        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, float(os.getenv("breath_threshold", 0.25)))
         self.ser = serial.Serial()
 
         Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
@@ -113,9 +112,9 @@ class Receiver(Tk):
 
     def simulate_sample(self):
         self.timer_active = False
-        x = self.counter * 1 / scan_frequency_arg
+        x = self.counter / scan_frequency_arg
         self.get_sample(value=sin(breath_frequency_arg, amplitude_arg, x))
-        self.after(int(100 / scan_frequency_arg), func=self.simulate_sample)
+        self.after(1000 / scan_frequency_arg, func=self.simulate_sample)
         self.counter += 1
 
     def on_start_stop_button(self, event):
