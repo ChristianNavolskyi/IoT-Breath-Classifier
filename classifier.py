@@ -23,7 +23,7 @@ class Classifier:
 
         breath_mean = np.mean(breath)
         time_crossing_indices = np.argwhere(np.diff(np.sign(breath - breath_mean))).flatten()
-        logging.info("Crossing indices: {0}".format(time_crossing_indices))
+        logging.debug("Crossing indices: {0}".format(time_crossing_indices))
 
         indices_diff = np.diff(time_crossing_indices)
         for ind, diff in enumerate(indices_diff):
@@ -31,16 +31,16 @@ class Classifier:
                 time_crossing_indices = np.delete(time_crossing_indices, ind + 1)
 
         crossing_times = time[time_crossing_indices]
-        logging.info("Crossing Times: {0}".format(crossing_times))
+        logging.debug("Crossing Times: {0}".format(crossing_times))
 
         diffs = np.diff(crossing_times)
-        logging.info("Diffs: {0}".format(diffs))
+        logging.debug("Diffs: {0}".format(diffs))
 
         mean_diff = np.mean(diffs)
-        logging.info("Mean diff: {0}".format(mean_diff))
+        logging.debug("Mean diff: {0}".format(mean_diff))
 
         if self.initial_breath_rate is None:
             self.initial_breath_rate = mean_diff
-        else:# mean_diff / self.initial_breath_rate < 1 - self.threshold:
+        elif mean_diff / self.initial_breath_rate < 1 - self.threshold:
             logging.info("Classifier is sending emergency")
             self.notifier.send_emergency("An asthma attack could be happening right now, please help", send_location=True)

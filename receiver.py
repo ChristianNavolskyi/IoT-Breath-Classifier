@@ -28,12 +28,12 @@ class Receiver(Tk):
     def __init__(self):
         Tk.__init__(self)
         self.wm_iconname("Breath Visualiser")
-        logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+        logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
         self.counter = 0
 
         self.x_limit = os.getenv("num_values", 100)
-        self.sample_length = 26
+        self.sample_length = 10
         self.x_values = BoundedList(self.x_limit, values=numpy.array([time.time() for _ in range(self.x_limit)]))
         self.breath_values = BoundedList(self.x_limit)
 
@@ -58,7 +58,7 @@ class Receiver(Tk):
         self.button_text = StringVar(self, "Start")
         start_stop_button = Button(self,
                                    textvariable=self.button_text,
-                                   command=self.set_classification_state,
+                                   command=self.on_start_stop_button,
                                    bg="grey",
                                    fg="black")
         start_stop_button.grid(row=3, columnspan=3, pady=10, sticky=S)
@@ -88,10 +88,9 @@ class Receiver(Tk):
             sample_string = self.ser.readline()
             logging.debug("Receiving data: {0}".format(sample_string))
 
-            if len(sample_string) == self.sample_length:
-                sample_string = sample_string[0:-1]
-                sample_values = sample_string.split()
-                value = float(sample_values[0])
+            sample_string = sample_string[0:-1]
+            value = int(sample_string)
+            logging.debug("Only number from UART: {0}".format(value))
         elif not value:
             return
 
@@ -117,7 +116,7 @@ class Receiver(Tk):
         self.after(1000 / scan_frequency_arg, func=self.simulate_sample)
         self.counter += 1
 
-    def on_start_stop_button(self, event):
+    def on_start_stop_button(self):
         if not self.isLogging:
             self.isLogging = True
             self.ser.baudrate = 115200
@@ -126,8 +125,7 @@ class Receiver(Tk):
             try:
                 self.ser.open()
                 if self.ser.isOpen():
-                    message = "Opened port " + port_name
-                    self.write_log_text(message)
+                    self.write_log_text("Opened port " + port_name)
                     self.button_text.set("Stop")
                     self.timer_active = True
                     self.get_sample(scan_frequency=scan_frequency_arg)
