@@ -2,4 +2,5 @@ pyserial
 numpy
 matplotlib
 requests
+wxpython
 geocoder

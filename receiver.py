@@ -87,9 +87,7 @@ class Receiver(Tk):
         if self.ser.is_open:
             sample_string = self.ser.readline()
             logging.debug("Receiving data: {0}".format(sample_string))
-
-            sample_string = sample_string[0:-1]
-            value = int(sample_string)
+            value = int.from_bytes(sample_string, byteorder='big')
             logging.debug("Only number from UART: {0}".format(value))
         elif not value:
             return
