@@ -18,12 +18,15 @@ class Visualiser(tk.Frame):
         self.canvas.get_tk_widget().grid()
 
         self.ax = fig.add_subplot(1, 1, 1)
+        self.ax.set_ylim(0, 3500000)
 
         for plot_type in range(self.number_of_plots):
             self.ax.plot(x_values.values, self.y_values_of_plots[plot_type].values)
 
     def update_plot(self):
         self.ax.clear()
+        self.ax.set_ylim(0, 3500000)
+
         for plot_type in range(self.number_of_plots):
             self.ax.plot(self.x_values.values, self.y_values_of_plots[plot_type].values)
 
