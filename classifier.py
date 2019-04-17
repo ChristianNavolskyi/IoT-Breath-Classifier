@@ -27,7 +27,7 @@ class Classifier:
 
         indices_diff = np.diff(time_crossing_indices)
         for ind, diff in enumerate(indices_diff):
-            if diff == 1:
+            if diff == 1 and ind < indices_diff.__len__() - 1:
                 time_crossing_indices = np.delete(time_crossing_indices, ind + 1)
 
         crossing_times = time[time_crossing_indices]
