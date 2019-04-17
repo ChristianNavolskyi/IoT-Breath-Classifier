@@ -1,11 +1,9 @@
 import atexit
 import logging
 import os
-import time
 from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
 import matplotlib
-import numpy
 import serial
 
 from bounded_list import BoundedList
@@ -19,6 +17,8 @@ breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
 scan_frequency_arg = int(os.getenv("scan_frequency", 50))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
 
+endSequence = "end".encode()
+
 
 class Receiver(Tk):
     def __init__(self):
@@ -26,10 +26,10 @@ class Receiver(Tk):
         self.wm_iconname("Breath Visualiser")
         logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
-        self.counter = 0
+        self.last_multiple = 0
 
         self.x_limit = os.getenv("num_values", 100)
-        self.x_values = BoundedList(self.x_limit, values=numpy.array([time.time() for _ in range(self.x_limit)]))
+        self.x_values = BoundedList(self.x_limit)
         self.breath_values = BoundedList(self.x_limit)
 
         self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
@@ -80,27 +80,35 @@ class Receiver(Tk):
 
     def get_sample(self, value=None, event=None, scan_frequency=50):
         if self.ser.is_open:
+            self.ser.write(endSequence)
             sample_string = self.ser.readline()
             logging.debug("Receiving data: {0}".format(sample_string))
-            value = int.from_bytes(sample_string, byteorder='big')
-            logging.debug("Only number from UART: {0}".format(value))
+
+            separated_samples = sample_string.split(";".encode())[0:-1]
+
+            for sample in separated_samples:
+                logging.debug("sample: {0}".format(sample))
+                sample_time, sample_value = sample.split(",".encode())
+                time = int(str(sample_time)[6:-1])
+
+                self.x_values.add_value(time)
+                self.breath_values.add_value(int(sample_value))
         elif not value:
             return
 
-        self.x_values.add_value(time.time())
-        self.breath_values.add_value(value)
-
         self.value_logger.info("{0}".format(value))
-        # self.write_log_text("Value: " + str(value))
 
         self.visualiser.update_plot()
 
-        if self.counter % self.x_limit == 0 and self.counter > 0:
+        time_multiple_of_limit = self.x_values.values[-1] / self.x_limit
+
+        if time_multiple_of_limit > self.last_multiple:
+            self.last_multiple = time_multiple_of_limit + 10
             self.write_log_text("Starting classification")
             self.classifier.classify_values()
 
         if self.timer_active:
-            self.after(int(1000/20), lambda: self.get_sample(scan_frequency=scan_frequency))
+            self.after(5000, lambda: self.get_sample(scan_frequency=scan_frequency))
 
     def on_start_stop_button(self):
         if not self.isLogging:
