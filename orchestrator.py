@@ -1,6 +1,5 @@
 import atexit
 import logging
-import os
 from logging import INFO, DEBUG
 from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
@@ -8,7 +7,7 @@ import matplotlib
 
 from bounded_list import BoundedList
 from classifier import Classifier
-from environment_variables import classification_frequency, breath_threshold
+from environment_variables import num_values, classification_frequency, breath_threshold
 from file_logger import FileLogger
 from sensor import Sensor
 from visualiser import Visualiser
@@ -24,7 +23,7 @@ class Orchestrator(Tk):
 
         self.classification_counter = 0
 
-        self.x_limit = os.getenv("num_values", 100)
+        self.x_limit = num_values
         self.x_values = BoundedList(self.x_limit)
         self.breath_values = BoundedList(self.x_limit)
 
@@ -59,8 +58,7 @@ class Orchestrator(Tk):
         atexit.register(self.do_at_exit)
 
     def do_at_exit(self):
-        if self.sensor.is_open:
-            self.sensor.close()
+        self.sensor.stop_sampling()
 
     def sampling_callback(self):
         self.visualiser.update_plot()
@@ -71,7 +69,6 @@ class Orchestrator(Tk):
             self.classifier.classify_values()
 
     def on_start_stop_button(self):
-        # TODO should work on first click
         if not self.isLogging:
             sampling_started = self.sensor.start_sampling()
             if sampling_started:

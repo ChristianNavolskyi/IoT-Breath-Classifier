@@ -9,7 +9,8 @@ from environment_variables import port_name, baudrate, timeout, end_sequence
 
 class Sensor(Serial):
     def __init__(self, x_values, y_values, sampling_callback, logging_callback, waiting_callback):
-        Serial.__init__(self, port_name, baudrate, timeout=timeout)
+        Serial.__init__(self, baudrate=baudrate, timeout=timeout)
+        self.port = port_name
         self.end_sequence = end_sequence
         self.x_values = x_values
         self.y_values = y_values

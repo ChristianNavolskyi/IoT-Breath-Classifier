@@ -9,6 +9,7 @@ if not port_name:
 baudrate = int(os.getenv("BAUDRATE", 115200))
 timeout = float(os.getenv("TIMEOUT", 0.25))
 end_sequence = os.getenv("END_SEQUENCE", "end").encode()
+num_values = os.getenv("num_values", 200)
 y_upper_limit = os.getenv("y_upper_limit", 1000000)
-classification_frequency = int(os.getenv("classification_frequency", 10))
+classification_frequency = int(os.getenv("classification_frequency", 5))
 breath_threshold = float(os.getenv("breath_threshold", 0.25))
