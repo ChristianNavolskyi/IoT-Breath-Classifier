@@ -67,4 +67,4 @@ class Sensor(Serial):
         self.sampling_callback()
 
         if self.sampling:
-            self.waiting_callback(5000, lambda: self.get_sample())
+            self.waiting_callback(5000, self.get_sample)
