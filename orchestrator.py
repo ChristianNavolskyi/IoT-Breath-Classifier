@@ -4,11 +4,11 @@ import os
 from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
 import matplotlib
-import serial
 
 from bounded_list import BoundedList
 from classifier import Classifier
 from file_logger import FileLogger
+from sensor import Sensor
 from visualiser import Visualiser
 
 matplotlib.use('WXAgg')
@@ -16,17 +16,16 @@ matplotlib.use('WXAgg')
 breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
 scan_frequency_arg = int(os.getenv("scan_frequency", 50))
 amplitude_arg = float(os.getenv("amplitude", 5.0))
+classification_frequency = int(os.getenv("classification_frequency", 5))
 
-endSequence = "end".encode()
 
-
-class Receiver(Tk):
+class Orchestrator(Tk):
     def __init__(self):
         Tk.__init__(self)
         self.wm_iconname("Breath Visualiser")
         logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG)
 
-        self.last_multiple = 0
+        self.classification_counter = 0
 
         self.x_limit = os.getenv("num_values", 100)
         self.x_values = BoundedList(self.x_limit)
@@ -36,11 +35,12 @@ class Receiver(Tk):
         self.classifying = False
         self.classification_job = None
         self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, float(os.getenv("breath_threshold", 0.25)))
-        self.ser = serial.Serial()
 
         Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
         self.visualiser = Visualiser(self, self.x_values, self.breath_values)
         self.visualiser.grid(row=1, column=0, sticky=N + S + W)
+
+        self.sensor = Sensor(port_name, self.x_values, self.breath_values, self.sampling_callback, self.write_log_text, self.after)
 
         Label(self, text="Sensor Values").grid(row=0, column=1, pady=10)
         self.log_text = Text(self)
@@ -58,77 +58,30 @@ class Receiver(Tk):
                                    fg="black")
         start_stop_button.grid(row=3, columnspan=3, pady=10, sticky=S)
 
-        self.timer_active = True
         self.isLogging = False
-
         atexit.register(self.do_at_exit)
 
     def do_at_exit(self):
-        if self.ser.is_open:
-            self.ser.close()
+        if self.sensor.is_open:
+            self.sensor.close()
 
-    def set_classification_state(self, state=None):
-        if state is None:
-            self.classifying = not self.classifying
-
-        if self.classifying:
-            self.classifier.classify_values()
-            self.classification_job = self.after(1000, lambda: self.set_classification_state(True))
-        elif self.classification_job is not None:
-            self.after_cancel(self.classification_job)
-            self.classification_job = None
-
-    def get_sample(self, value=None, event=None, scan_frequency=50):
-        if self.ser.is_open:
-            self.ser.write(endSequence)
-            sample_string = self.ser.readline()
-            logging.debug("Receiving data: {0}".format(sample_string))
-
-            separated_samples = sample_string.split(";".encode())[0:-1]
-
-            for sample in separated_samples:
-                logging.debug("sample: {0}".format(sample))
-                sample_time, sample_value = sample.split(",".encode())
-                time = int(str(sample_time)[6:-1])
-
-                self.x_values.add_value(time)
-                self.breath_values.add_value(int(sample_value))
-        elif not value:
-            return
-
-        self.value_logger.info("{0}".format(value))
-
+    def sampling_callback(self):
         self.visualiser.update_plot()
+        self.classification_counter += 1
 
-        time_multiple_of_limit = self.x_values.values[-1] / self.x_limit
-
-        if time_multiple_of_limit > self.last_multiple:
-            self.last_multiple = time_multiple_of_limit + 10
+        if self.classification_counter % classification_frequency == 0:
             self.write_log_text("Starting classification")
             self.classifier.classify_values()
 
-        if self.timer_active:
-            self.after(5000, lambda: self.get_sample(scan_frequency=scan_frequency))
-
     def on_start_stop_button(self):
         if not self.isLogging:
-            self.isLogging = True
-            self.ser.baudrate = 115200
-            self.ser.timeout = 0.25
-            self.ser.port = port_name
-            try:
-                self.ser.open()
-                if self.ser.isOpen():
-                    self.write_log_text("Opened port " + port_name)
-                    self.button_text.set("Stop")
-                    self.timer_active = True
-                    self.get_sample(scan_frequency=scan_frequency_arg)
-            except serial.serialutil.SerialException:
-                logging.error("Could not open serial port " + str(self.ser))
+            sampling_started = self.sensor.start_sampling()
+            if sampling_started:
+                self.isLogging = True
+                self.button_text.set("Stop")
         else:
-            self.timer_active = False
-            self.ser.close()
             self.isLogging = False
+            self.sensor.stop_sampling()
             self.button_text.set("Start")
 
     def write_log_text(self, message):
@@ -143,5 +96,5 @@ if __name__ == '__main__':
         logging.error("No port name provided. Please set PORT_NAME in the environment variables.")
         exit(1)
 
-    receiver = Receiver()
+    receiver = Orchestrator()
     receiver.mainloop()

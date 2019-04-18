@@ -1,5 +1,5 @@
-from receiver import Receiver
+from orchestrator import Orchestrator
 
-receiver = Receiver()
+receiver = Orchestrator()
 receiver.simulate_sample()
 receiver.mainloop()
