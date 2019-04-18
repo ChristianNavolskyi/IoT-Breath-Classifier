@@ -1,7 +1,7 @@
 import atexit
 import logging
 import os
-from logging import INFO
+from logging import INFO, DEBUG
 from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
 import matplotlib
@@ -20,7 +20,7 @@ class Orchestrator(Tk):
     def __init__(self):
         Tk.__init__(self)
         self.wm_iconname("Breath Visualiser")
-        logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.DEBUG)
+        logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=DEBUG)
 
         self.classification_counter = 0
 

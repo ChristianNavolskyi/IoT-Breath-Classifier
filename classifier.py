@@ -18,7 +18,6 @@ class Classifier:
         self.threshold = threshold
 
     def classify_values(self):
-        # TODO fix index error
         time = self.time_values.copy_values()
         breath = self.breath_values.copy_values()
 
@@ -27,9 +26,11 @@ class Classifier:
         logging.debug("Crossing indices: {0}".format(time_crossing_indices))
 
         indices_diff = np.diff(time_crossing_indices)
+        index_offset = 0
         for ind, diff in enumerate(indices_diff):
             if diff == 1 and ind < indices_diff.__len__() - 1:
-                time_crossing_indices = np.delete(time_crossing_indices, ind + 1)
+                time_crossing_indices = np.delete(time_crossing_indices, ind - index_offset)
+                index_offset += 1
 
         crossing_times = time[time_crossing_indices]
         logging.debug("Crossing Times: {0}".format(crossing_times))

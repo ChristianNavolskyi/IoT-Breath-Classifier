@@ -46,11 +46,15 @@ class Sensor(Serial):
         sample_string = self.readline()
         logging.debug("Receiving data: {0}".format(sample_string))
 
-        separated_samples = sample_string.split(";".encode())[0:-1]
-        # TODO fix first value not readable
+        if str(sample_string).startswith("b'\\x00"):
+            separated_samples = sample_string.split(";".encode())[0:-1]
+        else:
+            separated_samples = sample_string.split(";".encode())[1:-1]
+
         for sample in separated_samples:
             logging.debug("sample: {0}".format(sample))
             sample_time, sample_value = sample.split(",".encode())
+
             time = int(str(sample_time)[6:-1])
 
             if self.sampling_offset is None:
