@@ -7,8 +7,8 @@ from notifier import Notifier
 
 
 class Classifier:
-    def __init__(self, detection_file_name, time_values, breath_values, threshold):
-        self.notifier = Notifier()
+    def __init__(self, detection_file_name, time_values, breath_values, threshold, logging_callback):
+        self.notifier = Notifier(logging_callback)
         self.detectionLogger = FileLogger("ANOMALY_DETECTED", detection_file_name)
 
         self.time_values = time_values
@@ -18,6 +18,7 @@ class Classifier:
         self.threshold = threshold
 
     def classify_values(self):
+        # TODO fix index error
         time = self.time_values.copy_values()
         breath = self.breath_values.copy_values()
 
@@ -42,5 +43,4 @@ class Classifier:
         if self.initial_breath_rate is None:
             self.initial_breath_rate = mean_diff
         elif mean_diff / self.initial_breath_rate < 1 - self.threshold:
-            logging.info("Classifier is sending emergency")
             self.notifier.send_emergency("An asthma attack could be happening right now, please help", send_location=True)

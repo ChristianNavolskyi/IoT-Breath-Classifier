@@ -1,6 +1,7 @@
 import atexit
 import logging
 import os
+from logging import INFO
 from tkinter import Tk, Scrollbar, Label, Text, StringVar, Button, N, S, W, E, END
 
 import matplotlib
@@ -12,11 +13,6 @@ from sensor import Sensor
 from visualiser import Visualiser
 
 matplotlib.use('WXAgg')
-
-breath_frequency_arg = float(os.getenv("breath_freq", 12 / 60))
-scan_frequency_arg = int(os.getenv("scan_frequency", 50))
-amplitude_arg = float(os.getenv("amplitude", 5.0))
-classification_frequency = int(os.getenv("classification_frequency", 5))
 
 
 class Orchestrator(Tk):
@@ -34,7 +30,7 @@ class Orchestrator(Tk):
         self.value_logger = FileLogger("Breath_logger", "logs/breath.log")
         self.classifying = False
         self.classification_job = None
-        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, float(os.getenv("breath_threshold", 0.25)))
+        self.classifier = Classifier("logs/anomalies.log", self.x_values, self.breath_values, breath_threshold, self.write_log_text)
 
         Label(self, text="Breath Rate").grid(row=0, column=0, pady=10)
         self.visualiser = Visualiser(self, self.x_values, self.breath_values)
@@ -74,6 +70,7 @@ class Orchestrator(Tk):
             self.classifier.classify_values()
 
     def on_start_stop_button(self):
+        # TODO should work on first click
         if not self.isLogging:
             sampling_started = self.sensor.start_sampling()
             if sampling_started:
@@ -84,10 +81,12 @@ class Orchestrator(Tk):
             self.sensor.stop_sampling()
             self.button_text.set("Start")
 
-    def write_log_text(self, message):
-        self.log_text.insert(END, message + "\n")
-        self.log_text.see(END)
-        logging.info(message)
+    def write_log_text(self, message, level=INFO):
+        if level is INFO:
+            self.log_text.insert(END, message + "\n")
+            self.log_text.see(END)
+
+        logging.log(level, message)
 
 
 if __name__ == '__main__':
@@ -95,6 +94,13 @@ if __name__ == '__main__':
     if not port_name:
         logging.error("No port name provided. Please set PORT_NAME in the environment variables.")
         exit(1)
+
+    baudrate = int(os.getenv("BAUDRATE", 115200))
+    timeout = float(os.getenv("TIMEOUT", 0.25))
+    end_sequence = os.getenv("END_SEQUENCE", "end").encode()
+    y_upper_limit = os.getenv("y_upper_limit", 1000000)
+    classification_frequency = int(os.getenv("classification_frequency", 10))
+    breath_threshold = float(os.getenv("breath_threshold", 0.25))
 
     receiver = Orchestrator()
     receiver.mainloop()

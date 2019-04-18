@@ -5,10 +5,11 @@ import requests
 
 
 class Notifier:
-    def __init__(self):
+    def __init__(self, logging_callback):
         self.base_url = "http://localhost:8080/"
         self.notification_url = self.base_url + "emergency/"
         self.working = False
+        self.logging_callback = logging_callback
 
     def send_emergency(self, message=None, send_location=False):
         self.check_endpoint_availability()
@@ -27,7 +28,7 @@ class Notifier:
             data["lon"] = lon
             data["lat"] = lat
 
-        logging.info("Sending post")
+        self.logging_callback("Sending emergency")
         requests.post(self.notification_url, data=data)
 
     def check_endpoint_availability(self):

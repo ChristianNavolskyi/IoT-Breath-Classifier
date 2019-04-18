@@ -1,18 +1,15 @@
 import logging
-import os
+from logging import ERROR
 
 from serial import Serial
 from serial.serialutil import SerialException
 
-baudrate = int(os.getenv("BAUDRATE", 115200))
-timeout = float(os.getenv("TIMEOUT", 0.25))
-end_sequence = os.getenv("END_SEQUENCE", "end").encode()
+from orchestrator import baudrate, timeout, end_sequence
 
 
 class Sensor(Serial):
     def __init__(self, port_name, x_values, y_values, sampling_callback, logging_callback, waiting_callback):
         Serial.__init__(self, port_name, baudrate, timeout=timeout)
-        print("{0}, {1}, {2}, {3}".format(port_name, baudrate, timeout, end_sequence))
         self.end_sequence = end_sequence
         self.x_values = x_values
         self.y_values = y_values
@@ -33,7 +30,7 @@ class Sensor(Serial):
             return True
         except SerialException:
             self.close()
-            logging.error("Could not open serial port {0}".format(self))
+            self.logging_callback("Could not open serial port {0}".format(self), ERROR)
             return False
 
     def stop_sampling(self):

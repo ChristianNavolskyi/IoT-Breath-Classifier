@@ -3,6 +3,8 @@ import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.pyplot import Figure
 
+from orchestrator import y_upper_limit
+
 
 class Visualiser(tk.Frame):
     def __init__(self, master, x_values, *y_values):
@@ -18,12 +20,13 @@ class Visualiser(tk.Frame):
         self.canvas.get_tk_widget().grid()
 
         self.ax = fig.add_subplot(1, 1, 1)
+        self.ax.set_ylim(-100, y_upper_limit)
 
         for plot_type in range(self.number_of_plots):
             self.ax.plot(x_values.values, self.y_values_of_plots[plot_type].values)
 
     def update_plot(self):
-        upper_limit = max(max(self.y_values_of_plots[0].values), 1500000)
+        upper_limit = max(max(self.y_values_of_plots[0].values), y_upper_limit)
 
         self.ax.clear()
         self.ax.set_ylim(-100, upper_limit * (1 + 0.05))
