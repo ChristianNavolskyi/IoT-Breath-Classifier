@@ -4,11 +4,11 @@ from logging import ERROR
 from serial import Serial
 from serial.serialutil import SerialException
 
-from orchestrator import baudrate, timeout, end_sequence
+from environment_variables import port_name, baudrate, timeout, end_sequence
 
 
 class Sensor(Serial):
-    def __init__(self, port_name, x_values, y_values, sampling_callback, logging_callback, waiting_callback):
+    def __init__(self, x_values, y_values, sampling_callback, logging_callback, waiting_callback):
         Serial.__init__(self, port_name, baudrate, timeout=timeout)
         self.end_sequence = end_sequence
         self.x_values = x_values
@@ -47,7 +47,7 @@ class Sensor(Serial):
         logging.debug("Receiving data: {0}".format(sample_string))
 
         separated_samples = sample_string.split(";".encode())[0:-1]
-
+        # TODO fix first value not readable
         for sample in separated_samples:
             logging.debug("sample: {0}".format(sample))
             sample_time, sample_value = sample.split(",".encode())

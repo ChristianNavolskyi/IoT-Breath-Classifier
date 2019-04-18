@@ -8,6 +8,7 @@ import matplotlib
 
 from bounded_list import BoundedList
 from classifier import Classifier
+from environment_variables import classification_frequency, breath_threshold
 from file_logger import FileLogger
 from sensor import Sensor
 from visualiser import Visualiser
@@ -36,7 +37,7 @@ class Orchestrator(Tk):
         self.visualiser = Visualiser(self, self.x_values, self.breath_values)
         self.visualiser.grid(row=1, column=0, sticky=N + S + W)
 
-        self.sensor = Sensor(port_name, self.x_values, self.breath_values, self.sampling_callback, self.write_log_text, self.after)
+        self.sensor = Sensor(self.x_values, self.breath_values, self.sampling_callback, self.write_log_text, self.after)
 
         Label(self, text="Sensor Values").grid(row=0, column=1, pady=10)
         self.log_text = Text(self)
@@ -90,17 +91,5 @@ class Orchestrator(Tk):
 
 
 if __name__ == '__main__':
-    port_name = os.getenv("PORT_NAME")
-    if not port_name:
-        logging.error("No port name provided. Please set PORT_NAME in the environment variables.")
-        exit(1)
-
-    baudrate = int(os.getenv("BAUDRATE", 115200))
-    timeout = float(os.getenv("TIMEOUT", 0.25))
-    end_sequence = os.getenv("END_SEQUENCE", "end").encode()
-    y_upper_limit = os.getenv("y_upper_limit", 1000000)
-    classification_frequency = int(os.getenv("classification_frequency", 10))
-    breath_threshold = float(os.getenv("breath_threshold", 0.25))
-
     receiver = Orchestrator()
     receiver.mainloop()

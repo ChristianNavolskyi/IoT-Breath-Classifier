@@ -3,7 +3,7 @@ import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.pyplot import Figure
 
-from orchestrator import y_upper_limit
+from environment_variables import y_upper_limit
 
 
 class Visualiser(tk.Frame):
