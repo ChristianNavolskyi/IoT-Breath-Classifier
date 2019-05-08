@@ -29,14 +29,17 @@ class Uploader:
             if count is not 0:
                 print("Received {0} values".format(count))
                 time_diff = current_time - self.last_sampling
-                time_diff_per_sample = time_diff / count
+                time_diff_per_sample = time_diff / (count + 1)
                 data = []
 
                 for index, value in enumerate(self.last_data):
                     entry = {"time": str((current_time + index * time_diff_per_sample) * 1000), "value": value}
                     data.append(entry)
 
-                self.upload_values(json.dumps({"breath": data}))
+                try:
+                    self.upload_values(json.dumps({"breath": data}))
+                except:
+                    pass
 
             self.last_data = value_list
             self.last_sampling = current_time
