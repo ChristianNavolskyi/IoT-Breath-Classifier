@@ -13,7 +13,7 @@ class Uploader:
         self.url = url
         self.user = user_id
         self.headers = {"Content-Type": "application/json"}
-        self.last_sampling = time.time()
+        self.last_sampling = None
         self.last_data = None
         self.sensor = None
 
@@ -46,8 +46,8 @@ class Uploader:
             self.last_data = value_list
             self.last_sampling = current_time
 
-            time.sleep(1)
-            self.sensor.get_sample()
+        time.sleep(1)
+        self.sensor.get_sample()
 
     def start_sampling(self):
         self.sensor = Sensor(self.sampling_callback, logging.debug)
