@@ -44,16 +44,24 @@ class Sensor(Serial):
         sample_string = self.readline()
         logging.debug("Receiving data: {0}".format(sample_string))
 
+        all_samples_as_bytes = sample_string.split(",".encode())[0:-1]
+        string_samples = []
+
         if str(sample_string).startswith("b'\\x00"):
-            separated_samples = sample_string.split(",".encode())[0:-1]
+            string_samples = list(map(lambda x: str(x)[6:-1], all_samples_as_bytes))
         else:
-            separated_samples = sample_string.split(",".encode())[1:-1]
+            string_samples = list(map(lambda x: str(x)[6:-1], all_samples_as_bytes[1:-1]))
+            if len(all_samples_as_bytes) > 0:
+                fixed_sample = str(all_samples_as_bytes[0])[2:-1]
+                string_samples[0:0] = [fixed_sample]
+
+        int_samples = list(map(lambda x: int(x), string_samples))
 
         value_list = []
 
-        for sample in separated_samples:
+        for sample in int_samples:
             logging.debug("sample: {0}".format(sample))
-            value_list.append(int(str(sample)[6:-1]))
+            value_list.append(sample)
 
         self.sampling_callback(value_list)
 

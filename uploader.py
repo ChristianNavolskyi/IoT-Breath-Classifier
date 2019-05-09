@@ -46,7 +46,7 @@ class Uploader:
 
     def wait_callback(self, sensor):
         logging.debug("Waiting")
-        time.sleep(5)
+        time.sleep(1)
         sensor.get_sample()
 
     def start_sampling(self):
