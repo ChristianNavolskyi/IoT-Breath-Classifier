@@ -4,13 +4,14 @@ import time
 
 import requests
 
+from environment_variables import user_id, url
 from sensor import Sensor
 
 
 class Uploader:
     def __init__(self):
-        self.url = "http://localhost:5000/api/user/"
-        self.user = "5cd2f4f7f96bbe14c2cdde2b"
+        self.url = url
+        self.user = user_id
         self.headers = {"Content-Type": "application/json"}
         self.last_sampling = time.time()
         self.last_data = None
@@ -45,7 +46,6 @@ class Uploader:
             self.last_data = value_list
             self.last_sampling = current_time
 
-            logging.debug("Waiting")
             time.sleep(1)
             self.sensor.get_sample()
 
