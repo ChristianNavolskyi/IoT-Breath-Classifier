@@ -7,7 +7,7 @@ from environment_variables import port_name, baudrate, timeout, end_sequence
 
 
 class Sensor(Serial):
-    def __init__(self, sampling_callback, logging_callback, waiting_callback):
+    def __init__(self, sampling_callback, logging_callback):
         Serial.__init__(self, baudrate=baudrate, timeout=timeout)
         self.port = port_name
         self.end_sequence = end_sequence
@@ -16,7 +16,6 @@ class Sensor(Serial):
 
         self.sampling_callback = sampling_callback
         self.logging_callback = logging_callback
-        self.waiting_callback = waiting_callback
 
     def start_sampling(self):
         try:
@@ -64,6 +63,3 @@ class Sensor(Serial):
             value_list.append(sample)
 
         self.sampling_callback(value_list)
-
-        if self.sampling:
-            self.waiting_callback(self)

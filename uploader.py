@@ -14,6 +14,7 @@ class Uploader:
         self.headers = {"Content-Type": "application/json"}
         self.last_sampling = time.time()
         self.last_data = None
+        self.sensor = None
 
     def upload_values(self, data):
         return requests.put(url=self.url + self.user, headers=self.headers, data=data)
@@ -44,14 +45,13 @@ class Uploader:
             self.last_data = value_list
             self.last_sampling = current_time
 
-    def wait_callback(self, sensor):
-        logging.debug("Waiting")
-        time.sleep(1)
-        sensor.get_sample()
+            logging.debug("Waiting")
+            time.sleep(1)
+            self.sensor.get_sample()
 
     def start_sampling(self):
-        sensor = Sensor(self.sampling_callback, logging.debug, self.wait_callback)
-        sensor.start_sampling()
+        self.sensor = Sensor(self.sampling_callback, logging.debug)
+        self.sensor.start_sampling()
 
 
 if __name__ == '__main__':
