@@ -1,5 +1,4 @@
 import logging
-from logging import ERROR
 
 from serial import Serial
 from serial.serialutil import SerialException
@@ -8,18 +7,15 @@ from environment_variables import port_name, baudrate, timeout, end_sequence
 
 
 class Sensor(Serial):
-    def __init__(self, x_values, y_values, sampling_callback, logging_callback, waiting_callback):
+    def __init__(self, sampling_callback, logging_callback):
         Serial.__init__(self, baudrate=baudrate, timeout=timeout)
         self.port = port_name
         self.end_sequence = end_sequence
-        self.x_values = x_values
-        self.y_values = y_values
         self.sampling = False
         self.sampling_offset = None
 
         self.sampling_callback = sampling_callback
         self.logging_callback = logging_callback
-        self.waiting_callback = waiting_callback
 
     def start_sampling(self):
         try:
@@ -31,7 +27,7 @@ class Sensor(Serial):
             return True
         except SerialException:
             self.close()
-            self.logging_callback("Could not open serial port {0}".format(self), ERROR)
+            self.logging_callback("Could not open serial port {0}".format(self))
             return False
 
     def stop_sampling(self):
@@ -47,24 +43,23 @@ class Sensor(Serial):
         sample_string = self.readline()
         logging.debug("Receiving data: {0}".format(sample_string))
 
+        all_samples_as_bytes = sample_string.split(",".encode())[0:-1]
+        string_samples = []
+
         if str(sample_string).startswith("b'\\x00"):
-            separated_samples = sample_string.split(";".encode())[0:-1]
+            string_samples = list(map(lambda x: str(x)[6:-1], all_samples_as_bytes))
         else:
-            separated_samples = sample_string.split(";".encode())[1:-1]
+            string_samples = list(map(lambda x: str(x)[6:-1], all_samples_as_bytes[1:-1]))
+            if len(all_samples_as_bytes) > 0:
+                fixed_sample = str(all_samples_as_bytes[0])[2:-1]
+                string_samples[0:0] = [fixed_sample]
 
-        for sample in separated_samples:
+        int_samples = list(map(lambda x: int(x), string_samples))
+
+        value_list = []
+
+        for sample in int_samples:
             logging.debug("sample: {0}".format(sample))
-            sample_time, sample_value = sample.split(",".encode())
+            value_list.append(sample)
 
-            time = int(str(sample_time)[6:-1])
-
-            if self.sampling_offset is None:
-                self.sampling_offset = time
-
-            self.x_values.add_value(time - self.sampling_offset)
-            self.y_values.add_value(int(sample_value))
-
-        self.sampling_callback()
-
-        if self.sampling:
-            self.waiting_callback(5000, self.get_sample)
+        self.sampling_callback(value_list)
